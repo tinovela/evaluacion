@@ -37,7 +37,6 @@
         const { useState, useEffect, useRef } = React;
 
         // --- ICONOS (SVG) ---
-        // Los definimos aquí para no depender de librerías externas complejas
         const Icon = ({ path, size = 18, className = "" }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
                 {path}
@@ -55,6 +54,7 @@
             Copy: (props) => <Icon {...props} path={<><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></>} />,
             Upload: (props) => <Icon {...props} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>} />,
             AlertTriangle: (props) => <Icon {...props} path={<><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>} />,
+            MessageSquare: (props) => <Icon {...props} path={<><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>} />,
         };
 
         // --- DATOS Y CRITERIOS ---
@@ -245,7 +245,8 @@
             const newStudent = {
               id: Date.now().toString(),
               name: newStudentName,
-              evaluations: {}
+              evaluations: {},
+              generalFeedback: '' // Campo nuevo
             };
             setStudents([...students, newStudent]);
             setSelectedStudentId(newStudent.id);
@@ -291,6 +292,13 @@
               };
             }));
           };
+          
+          const updateGeneralFeedback = (value) => {
+            setStudents(students.map(student => {
+              if (student.id !== selectedStudentId) return student;
+              return { ...student, generalFeedback: value };
+            }));
+          };
 
           const toggleSection = (sectionId) => {
             setOpenSections(prev => ({
@@ -322,6 +330,7 @@
                 .label { font-weight: bold; }
                 .note { font-style: italic; color: #555; margin-left: 25px; }
                 .meta { color: #7f8c8d; font-size: 0.9em; }
+                .feedback-box { background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 5px; margin-top: 10px; }
               </style>
               </head><body>
               <h1>Evaluación de Impro: ${student.name}</h1>
@@ -349,6 +358,11 @@
                 }
               });
             });
+
+            if (student.generalFeedback) {
+                html += `<h2>Devolución General</h2>`;
+                html += `<div class='feedback-box'><p style='white-space: pre-wrap;'>${student.generalFeedback}</p></div>`;
+            }
 
             html += `</body></html>`;
             return html;
@@ -387,6 +401,11 @@
                   });
                   text += '\n';
               });
+              
+              if (student.generalFeedback) {
+                  text += `DEVOLUCIÓN GENERAL\n--------------------------------\n${student.generalFeedback}\n\n`;
+              }
+
               navigator.clipboard.writeText(text);
               alert('Reporte copiado al portapapeles!');
           };
@@ -581,6 +600,23 @@
                             toggle={() => toggleSection(section.id)}
                           />
                         ))}
+                        
+                        {/* DEVOLUCIÓN GENERAL */}
+                        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-8 print-break">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Icons.MessageSquare className="text-indigo-600" />
+                                <h3 className="font-bold text-lg text-slate-800">Devolución General</h3>
+                            </div>
+                            <p className="text-sm text-slate-500 mb-3">
+                                Resumen global, objetivos para la próxima clase o palabras de aliento.
+                            </p>
+                            <textarea
+                                value={activeStudent.generalFeedback || ''}
+                                onChange={(e) => updateGeneralFeedback(e.target.value)}
+                                placeholder="Escribe aquí tu devolución general para el alumno..."
+                                className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent min-h-[150px] text-slate-700 resize-y bg-slate-50"
+                            />
+                        </div>
 
                         <div className="h-20"></div> {/* Espacio extra para scroll */}
                       </div>
