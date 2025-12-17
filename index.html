@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ImproTracker - Bitácora del Director</title>
+    <title>ImproTracker v1.0 - Bitácora del Director</title>
     
     <!-- React y ReactDOM (El motor de la app) -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -55,6 +55,7 @@
             Upload: (props) => <Icon {...props} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>} />,
             AlertTriangle: (props) => <Icon {...props} path={<><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>} />,
             MessageSquare: (props) => <Icon {...props} path={<><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>} />,
+            FileText: (props) => <Icon {...props} path={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></>} />,
         };
 
         // --- DATOS Y CRITERIOS ---
@@ -381,6 +382,83 @@
             link.click();
             document.body.removeChild(link);
           };
+          
+          const exportAllToWord = () => {
+             if (students.length === 0) {
+                 alert("No hay alumnos para exportar.");
+                 return;
+             }
+
+             let htmlBody = '';
+
+             students.forEach((student, index) => {
+                 if (index > 0) {
+                     htmlBody += '<div style="page-break-before: always;"></div>';
+                 }
+
+                 const getStatusEmoji = (status) => {
+                    if (status === 'green') return '🟢';
+                    if (status === 'yellow') return '🟡';
+                    if (status === 'red') return '🔴';
+                    return '⚪';
+                 };
+
+                 htmlBody += `<h1>Evaluación de Impro: ${student.name}</h1>`;
+                 htmlBody += `<p class="meta">Fecha: ${new Date().toLocaleDateString()}</p>`;
+
+                 CRITERIA.forEach(cat => {
+                     const catData = student.evaluations[cat.id];
+                     if (!catData) return;
+                     const hasData = Object.values(catData).some(item => item.status || item.note);
+                     if (!hasData) return;
+
+                     htmlBody += `<h2>${cat.title}</h2>`;
+                     cat.items.forEach(item => {
+                         const itemData = catData[item.id];
+                         if (itemData && (itemData.status || itemData.note)) {
+                             htmlBody += `<div class='item'>`;
+                             htmlBody += `<p><span class='label'>${getStatusEmoji(itemData.status)} ${item.label}</span>: ${item.desc}</p>`;
+                             if (itemData.note) {
+                                 htmlBody += `<p class='note'>Nota: ${itemData.note}</p>`;
+                             }
+                             htmlBody += `</div>`;
+                         }
+                     });
+                 });
+
+                 if (student.generalFeedback) {
+                      htmlBody += `<h2>Devolución General</h2>`;
+                      htmlBody += `<div class='feedback-box'><p style='white-space: pre-wrap;'>${student.generalFeedback}</p></div>`;
+                 }
+             });
+
+             const fullHtml = `
+               <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+               <head><meta charset='utf-8'><title>Evaluaciones Impro - Completo</title>
+               <style>
+                 body { font-family: Calibri, sans-serif; line-height: 1.5; }
+                 h1 { color: #2c3e50; border-bottom: 2px solid #2c3e50; }
+                 h2 { color: #e67e22; margin-top: 20px; }
+                 .item { margin-bottom: 10px; page-break-inside: avoid; }
+                 .label { font-weight: bold; }
+                 .note { font-style: italic; color: #555; margin-left: 25px; }
+                 .meta { color: #7f8c8d; font-size: 0.9em; }
+                 .feedback-box { background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 5px; margin-top: 10px; }
+               </style>
+               </head><body>
+               ${htmlBody}
+               </body></html>
+             `;
+
+             const blob = new Blob(['\ufeff', fullHtml], { type: 'application/msword' });
+             const url = URL.createObjectURL(blob);
+             const link = document.createElement('a');
+             link.href = url;
+             link.download = `Evaluaciones_Impro_Completo_${new Date().toISOString().slice(0, 10)}.doc`;
+             document.body.appendChild(link);
+             link.click();
+             document.body.removeChild(link);
+          };
 
           const copyToClipboard = (student) => {
               let text = `EVALUACIÓN DE IMPRO: ${student.name}\nFecha: ${new Date().toLocaleDateString()}\n\n`;
@@ -459,7 +537,7 @@
                   <h1 className="text-xl font-bold flex items-center gap-2">
                     <span>🎭</span> ImproTracker
                   </h1>
-                  <p className="text-xs text-indigo-200 mt-1">Bitácora de Evaluación</p>
+                  <p className="text-xs text-indigo-200 mt-1">Bitácora de Evaluación <span className="text-indigo-400 font-mono ml-1">v1.0</span></p>
                 </div>
 
                 <div className="p-4 border-b border-slate-800">
@@ -508,6 +586,18 @@
                 
                 {/* BACKUP & DANGER CONTROLS */}
                 <div className="p-4 bg-slate-950 border-t border-slate-800 space-y-3">
+                  
+                  {/* Export All Button */}
+                  <div>
+                    <button 
+                       onClick={exportAllToWord}
+                       className="w-full flex items-center justify-center gap-2 bg-indigo-700 hover:bg-indigo-600 text-xs py-2 px-1 rounded transition-colors text-white font-medium mb-3 shadow-sm border border-indigo-600"
+                       title="Exportar todas las evaluaciones en un solo archivo Word"
+                    >
+                      <Icons.FileText size={14} /> Exportar Todo (Word)
+                    </button>
+                  </div>
+
                   <div>
                     <p className="text-xs text-slate-500 mb-2 uppercase font-bold tracking-wider">Respaldo</p>
                     <div className="flex gap-2">
